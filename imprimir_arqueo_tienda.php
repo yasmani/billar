@@ -110,7 +110,7 @@ $pdf->setY(6);
 $pdf->setX(2);
 $pdf->Cell(5,$textypos,'ARTICULO.               CANT | PRECI    |TOTAL',0,0,"center");
 
-$sentencia = $base_de_datos->query("SELECT productos.codigo,ventastienda.tarjeta,ventastienda.transferencia, productos_vendidos_tienda.id, productos_vendidos_tienda.id_producto, (productos_vendidos_tienda.descuento) as descuento , sum(productos_vendidos_tienda.cantidad) as cantidad,productos.nombre, productos_vendidos_tienda.precio as precioVenta , SUM(productos_vendidos_tienda.precio*productos_vendidos_tienda.cantidad)as total FROM ventastienda,productos_vendidos_tienda ,productos WHERE productos_vendidos_tienda.apertura='$id' and productos_vendidos_tienda.id_venta=ventastienda.id and productos.id=productos_vendidos_tienda.id_producto  GROUP by productos_vendidos_tienda.id_producto;");
+$sentencia = $base_de_datos->query("SELECT productos.codigo, productos.lote,ventastienda.tarjeta,ventastienda.transferencia,productos_vendidos_tienda.id_producto, productos_vendidos_tienda.id, productos_vendidos_tienda.id_producto, (productos_vendidos_tienda.descuento) as descuento , sum(productos_vendidos_tienda.cantidad) as cantidad,productos.nombre, productos_vendidos_tienda.precio as precioVenta , SUM(productos_vendidos_tienda.precio*productos_vendidos_tienda.cantidad)as total FROM ventastienda,productos_vendidos_tienda ,productos WHERE productos_vendidos_tienda.apertura='$id' and productos_vendidos_tienda.id_venta=ventastienda.id and productos.id=productos_vendidos_tienda.id_producto  GROUP by productos_vendidos_tienda.id_producto;");
 $productos = $sentencia->fetchAll(PDO::FETCH_OBJ);
 
 $total =0;
@@ -137,19 +137,53 @@ $pdf->Cell(11,8,( number_format( $producto->precioVenta,0,".",",")),0,0,"L");
 $pdf->setX(60);
 $pdf->Cell(11,8, '',0,0,"L");
 $pdf->setX(60);
-if($producto->codigo=='23'){
-    
+if($producto->lote=='BILLAR'){
+   $id_producto= $producto->id_producto;
+ 
+$sentencia_billar = $base_de_datos->query("SELECT 
+p.codigo,
+p.lote,
+v.orden,
+v.tarjeta,
+v.transferencia,
+t.id_venta,
+v.entregado,
+t.id, 
+t.id_producto,
+t.descuento,
+t.cantidad,
+p.nombre, 
+t.precio as precioVenta 
+FROM ventastienda v
+LEFT JOIN productos_vendidos_tienda t on t.id_venta=v.id
+LEFT JOIN productos p on p.id=t.id_producto
+WHERE v.apertura='$id'
+and t.id_producto='$id_producto';");
+$billar = $sentencia_billar->fetchAll(PDO::FETCH_OBJ);
+
+   $total_billar = 0;
+foreach($billar as $b){
+
+
+
+
+   $total_billar =$total_billar + number_format($b->precioVenta - $b->descuento,0,".",",");
+
+
+}
+
+
 //$pdf->Cell(11,8, number_format(($producto->precioVenta*$producto->cantidad)- $producto->descuento,0,".",",") ,0,1,"L");
 
-$pdf->Cell(11,8, number_format($producto->total,0,".",",") ,0,1,"L");
+$pdf->Cell(11,8, number_format($total_billar,0,".",",") ,0,1,"L");
 
-$total+=number_format($producto->total,0,".",",");
+$total+=number_format($total_billar,0,".",",");
 
 }else{
 
 //$pdf->Cell(11,8, number_format(($producto->precioVenta*$producto->cantidad)- $producto->descuento,1,".",",") ,0,1,"L");    
 $pdf->Cell(11,8, number_format($producto->total,1,".",",") ,0,1,"L");  
-$total+=number_format($producto->total,1,".",",");
+$total+=$producto->total;
 
 }
  
@@ -256,6 +290,7 @@ $pdf->Cell(60,8,"TOTAL INVENTARIO   :  ". $total,1,1,"C");
 
 $sentencia_pedidos = $base_de_datos->query("SELECT 
 p.codigo,
+p.lote,
 v.orden,
 v.tarjeta,
 v.transferencia,
@@ -303,11 +338,11 @@ $pdf->Cell(50,8, number_format( $p->cantidad,0,".",",") );
 $pdf->setX(50);
 $pdf->Cell(11,8,( number_format( $p->precioVenta,0,".",",")),0,0,"L");
 $pdf->setX(63);
-if($p->codigo=='23'){
+if($p->lote=='BILLAR'){
     
-$pdf->Cell(11,8, number_format(($p->precioVenta*$p->cantidad)- $p->descuento,0,".",",") ,0,1,"L");
+$pdf->Cell(11,8, number_format($p->precioVenta- $p->descuento,0,".",",") ,0,1,"L");
 
-   $total_pedido+=number_format(($p->precioVenta*$p->cantidad)- $p->descuento,0,".",",");
+   $total_pedido+=number_format($p->precioVenta- $p->descuento,0,".",",");
 }else{
 
 $pdf->Cell(11,8, number_format(($p->precioVenta*$p->cantidad)- $p->descuento,1,".",",") ,0,1,"L");    

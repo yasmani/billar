@@ -269,8 +269,14 @@ foreach($productos as $producto){
    $pdf->setX(63);
    $pdf->Cell(11,8, number_format(($producto->precioVenta*$producto->cantidad)- $producto->descuento,1,".",",") ,0,1,"L");
    }
+    if($producto->lote=='BILLAR'){
    
+     $total += ($producto->precioVenta)-$producto->descuento; 
+  
+   }else{
    $total += ($producto->precioVenta*$producto->cantidad)-$producto->descuento;
+   }
+   
 }
  
  
