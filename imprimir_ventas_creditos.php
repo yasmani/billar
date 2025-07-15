@@ -1,0 +1,158 @@
+<?php
+if(!isset($_COOKIE["usuario"])){
+	header("Location: ./login2.php");
+	///echo $_COOKIE["usuario"]; 
+}else{
+	
+	include_once "verificar.php"; 
+}  
+ if ($tipo=='administrador') {
+	 # code...
+	 include_once "encabezado.php"; 
+	} else {
+		# code...
+		include_once "encabezado3.php"; 
+	//  header("Location: ./vender.pimhp");
+ }
+ ?>
+<?php
+include_once "base_de_datos.php";
+require __DIR__ . '/ticket/autoload.php';
+ 
+
+$ahora = date("Y-m-d H:i:s");
+date_default_timezone_set("America/La_Paz");
+$sentencia = $base_de_datos->query("SELECT ventas.nombre_de_usuario,ventas.cliente, ventas.tipoDeVenta, ventas.saldo,ventas.hora,ventas.nombre_de_usuario,ventas.orden,ventas.arqueo,ventas.total, ventas.fecha, ventas.id, GROUP_CONCAT(	productos.codigo, '..',  productos.nombre, '..', productos_vendidos.cantidad , '..', productos_vendidos.descuento SEPARATOR '__') AS productos FROM ventas  INNER JOIN productos_vendidos ON productos_vendidos.id_venta = ventas.id INNER JOIN productos ON productos.id = productos_vendidos.id_producto GROUP BY ventas.id ORDER BY ventas.id DESC;");
+$ventas = $sentencia->fetchAll(PDO::FETCH_OBJ);
+$id_cliente='';
+$nombre_cliente='';
+$cajero='';
+?>
+
+	<div class="col-xs-12">
+		<h1>VENTAS AL CREDITO</h1>
+		<br>
+		<table style="color:white" name="tabla" class="table table-bordered">
+			<thead style="color:white; " name="tabla" class="table table-darger">
+				<tr style="background-color: blue">
+					<th>NUMERO</th>
+					<th>FECHA</th>
+					<th>HORA</th>
+					<th>Cliente</th>
+					<th>VENDEDOR</th>
+					<th>PRODUCTOS VENDIDOS</th>
+					<th>TOTAL</th>
+					<th>saldo</th>
+					<th>ABONAR</th>
+					<th>eliminar</th>
+					<th>Imprimir productos</th>
+					<th>imprimir abonos</th>
+					<!-- <th>Eliminar</th> -->
+				</tr>
+			</thead>
+			<tbody>
+				<?php
+				$totalvendido=0;
+				
+				foreach($ventas as $venta){ 
+					// if("0"=="0"){
+					if($venta->tipoDeVenta=="2"){
+						$id_cliente=$venta->cliente;
+						$sql_cliente = $base_de_datos->query("SELECT  nombre from cliente where id='$id_cliente'");
+						//$sql_cliente->execute();
+						$resultado_cliente = $sql_cliente->fetch(PDO::FETCH_OBJ);
+						
+						//$idVenta = $resultado === false ? 1 : $resultado->id;
+					//	$resultado_cliente = $sql_cliente->fetchAll(PDO::FETCH_OBJ);
+
+							$nombre_cliente=$resultado_cliente->nombre;
+						//	$cajero=$resultado_cliente->nombre_de_usuario;
+						?>
+				<tr> 
+				
+					<td><?php echo $venta->orden ?></td>
+					<td><?php echo date("d/m/Y", strtotime($venta->fecha)) ?></td>
+					<td><?php echo  $venta->hora ?></td>
+					<td><?php echo $nombre_cliente ?></td>
+					<td><?php echo $venta->nombre_de_usuario ;
+					$cajero=$venta->nombre_de_usuario 
+					?></td>
+					<td>
+						<table style="background-color:#28293B ;color:white" class="table table-bordered">
+							<thead>
+								<tr>
+									<th>Código</th>
+									<th>nombre</th>
+									<th>Cantidad</th>
+									<th>descuento</th>
+								</tr>
+							</thead>
+							<tbody style="background-color:#28293B ;color:white">
+								<?php foreach(explode("__", $venta->productos) as $productosConcatenados){ 
+									$producto = explode("..", $productosConcatenados)
+									?>
+								<tr>
+									<td><?php echo $producto[0] ?></td>
+									<td><?php echo $producto[1] ?></td>
+									<td><?php echo $producto[2] ?></td>
+									<td><?php echo $producto[3] ?></td>
+								</tr>
+								<?php } 
+								?>
+							</tbody>
+						</table>
+					</td>
+					<td>
+					<?php
+					$totalvendido=$totalvendido+$venta->total;
+					echo $venta->total;
+					$error = [ 'id' => $venta->id,'cajero'=> $venta->nombre_de_usuario ];
+					$error = serialize($error);
+				$error = urlencode($error);
+					?></td>
+					<td>
+						<?php 
+						
+						echo $venta->total-$venta->saldo;
+						?>
+					</td>
+					<td>  
+						<?php 
+						if($venta->total-$venta->saldo>0){
+
+							echo '<form action="abonar.php" method="post">
+							<input    style="margin-left: 80px; background-color: #7D7B7A;font-size:25px;width:150px"  type="hidden" name="id_usuario"  id="idUsuario" value="'.$id.'">
+							<input required  name="codigo" style="color: black;" value="'.$venta->id.'" type="hidden">
+							<input required name="monto" style="color:black" type="text">
+							<button style="color:black" type="submit">abonar</button>						
+							</form>';
+						}
+							
+									?>
+	 
+
+					</td>
+					 <td><a class="btn btn-danger" href="<?php echo "eliminarVenta.php?id=" . $venta->id?>"><i class="fa fa-trash"></i></a></td>
+					 <td><a class="btn btn-info" href="<?php echo "imprimir.php?ticket=".$error ?> "><i class="fa fa-print"></i></a></td>
+
+					 <td><a class="btn btn-info" href="<?php echo "imprimir_creditos.php?ticket=".$error ?> "><i class="fa fa-print"></i></a></td>
+				</tr>
+				<?php } 
+				}
+				?>
+			</tbody>
+		</table>
+		<div>   
+		  
+		</div>
+			<h3 style='display:none' >TOTAL VENDIDO:
+
+		<?php
+				
+				echo $totalvendido. "  Bs."  ?> 
+					<!-- <a class="btn btn-danger" href="<?php echo "guardar_arqueo.php?id=" . $venta->id?>"> ARQUEO <i class="fa fa-money-bill-alt"></i></a></h2>  -->
+					
+					
+	</div>
+	
+<?php include_once "pie.php" ?>
